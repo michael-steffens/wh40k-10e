@@ -1,14 +1,12 @@
 import { XMLParser } from "fast-xml-parser";
-import { opendir, readFile, writeFile } from "fs/promises";
+import { mkdir, opendir, readFile, writeFile } from "node:fs/promises";
 import { type Dirent } from "fs";
 
-const sourcePath = "./data";
-
-async function readFilesInFolder({ path }: { path: string }) {
+async function readFilesInFolder({ inputPath }: { inputPath: string }) {
   let dirData: Dirent[] = [];
 
   try {
-    const files = await opendir(path);
+    const files = await opendir(inputPath);
     for await (const file of files) {
       dirData.push(file);
     }
@@ -46,7 +44,20 @@ async function parseFiles({
 }
 
 async function main() {
-  const files = await readFilesInFolder({ path: sourcePath });
+  const sourceDir = "./data";
+  const outputDir = "./out";
+
+  const files = await readFilesInFolder({ inputPath: sourceDir });
+
+  // if the output directory does not exist, create it
+  try {
+    const dir = await opendir(outputDir);
+    await dir.close();
+  } catch (err) {
+    console.log("Creating output directory");
+    await mkdir(outputDir);
+  }
+
   const parser = new XMLParser({
     removeNSPrefix: true,
     ignoreAttributes: false,
@@ -59,7 +70,7 @@ async function main() {
   }
 
   for (const file of files) {
-    parseFiles({ file, parser, outputDir: "./out" });
+    parseFiles({ file, parser, outputDir: outputDir });
   }
 }
 
