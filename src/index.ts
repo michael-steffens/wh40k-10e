@@ -1,15 +1,15 @@
-import { XMLParser } from "fast-xml-parser";
 import { mkdir, opendir, readFile, writeFile } from "node:fs/promises";
 import { type Dirent } from "fs";
+import { parseXML } from "./schema/index";
 
 async function readFilesInFolder({ inputPath }: { inputPath: string }) {
   let dirData: Dirent[] = [];
-
   try {
     const files = await opendir(inputPath);
     for await (const file of files) {
       dirData.push(file);
     }
+
     return dirData;
   } catch (err) {
     console.log(err);
@@ -19,18 +19,22 @@ async function readFilesInFolder({ inputPath }: { inputPath: string }) {
 
 async function parseFiles({
   file,
-  parser,
   outputDir,
 }: {
   file: Dirent;
-  parser: XMLParser;
   outputDir: string;
 }) {
   if (file.isFile()) {
-    const fileContent = await readFile(file.path, "utf8");
+    const fileContent = await readFile(file.path + "/" + file.name, "utf8");
+
     const fileWithoutExtension = file.name.split(".")[0];
+
     try {
-      const jsonData = parser.parse(fileContent);
+      const jsonData = parseXML(fileContent, false);
+
+      const test = jsonData.type;
+      console.log(test);
+
       await writeFile(
         `${outputDir}/${fileWithoutExtension}.json`,
         JSON.stringify(jsonData),
@@ -58,19 +62,13 @@ async function main() {
     await mkdir(outputDir);
   }
 
-  const parser = new XMLParser({
-    removeNSPrefix: true,
-    ignoreAttributes: false,
-    attributeNamePrefix: "",
-  });
-
   if (!files) {
     console.log("No files found in the folder");
     return;
   }
 
   for (const file of files) {
-    parseFiles({ file, parser, outputDir: outputDir });
+    parseFiles({ file, outputDir: outputDir });
   }
 }
 
